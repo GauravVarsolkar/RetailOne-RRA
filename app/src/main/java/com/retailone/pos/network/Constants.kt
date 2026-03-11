@@ -41,8 +41,8 @@ object Constants {
 
 
     // zra
-//    const val BASE_URL = "http://zra.ahirentals.com/api/"
-//    const val IMAGE_URL = "http://zra.ahirentals.com/"
+//    const val BASE_URL = "https://zra.ahirentals.com/api/"
+//    const val IMAGE_URL = "https://zra.ahirentals.com/"
     //rra
     const val BASE_URL = "https://rra.ahirentals.com/api/"
     const val IMAGE_URL = "https://rra.ahirentals.com/"

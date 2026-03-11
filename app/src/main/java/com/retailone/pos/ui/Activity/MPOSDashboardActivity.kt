@@ -143,7 +143,11 @@ class MPOSDashboardActivity : AppCompatActivity() {
 
             viewmodel.callLocalizationApi(storeid,this@MPOSDashboardActivity)
             viewmodel.callOrganizationDetailsApi(storeid,this@MPOSDashboardActivity)
-            viewmodel.callNoticesApi("20231120191141", this@MPOSDashboardActivity)
+            val isFreshLogin = loginSession.getFreshLogin().first()
+            if (isFreshLogin) {
+                viewmodel.callNoticesApi("20231120191141", this@MPOSDashboardActivity)
+                loginSession.setFreshLogin(false) // ✅ Consume the flag immediately
+            }
 
         }
 
@@ -290,11 +294,6 @@ class MPOSDashboardActivity : AppCompatActivity() {
             showLogoutDialog()
         }
 
-        val showNoticeDialog = intent.getBooleanExtra("SHOW_NOTICE_DIALOG", false)
-        if (showNoticeDialog) {
-            val lastReqDt = SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault()).format(Date())
-            viewmodel.callNoticesApi(lastReqDt, this@MPOSDashboardActivity)
-        }
 
 
         val organisation_data = organisationDetailsHelper.getOrganisationData()

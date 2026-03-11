@@ -111,6 +111,7 @@ class MPOSLoginActivity : AppCompatActivity() {
                     loginSession.saveStoreID(storeid)
                     loginSession.saveStoreManagerID(store_manager_id.toString()) //storemanager_id
                     loginSession.storeLoginSession(loginResponse!!.data.token,true)
+                    loginSession.setFreshLogin(true)
                     showMessage("Login Sucessfull")
                    // navigateToActivity(FetchTOT::class.java,"USER_STATUS" ,"LoggedIn")
                     navigateToHomepage()
@@ -142,7 +143,6 @@ class MPOSLoginActivity : AppCompatActivity() {
 
     private fun navigateToHomepage() {
         val intent = Intent(this@MPOSLoginActivity, MPOSDashboardActivity::class.java)
-        intent.putExtra("SHOW_NOTICE_DIALOG", true)
         startActivity(intent)
         finish()
     }

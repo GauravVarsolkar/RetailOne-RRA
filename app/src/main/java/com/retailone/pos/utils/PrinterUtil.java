@@ -1670,11 +1670,14 @@ public class PrinterUtil {
             mUsbThermalPrinter.walkPaper(1);
 
             // ── CHANGED: Receipt Number (after QR) with padLeft ──────
+
+
             String rcptNumLabel = "RECEIPT NUMBER:";
             String receiptNum = (details.getData().getInvoice_id() != null)
-                    ? details.getData().getInvoice_id() : "";
+                        ? details.getData().getInvoice_id() : "";
             mUsbThermalPrinter.addString(rcptNumLabel + padLeft(receiptNum, TSIZE22 - rcptNumLabel.length()));
             mUsbThermalPrinter.printString();
+
 
             String rawDateTimee = details.getData().getPurchase_date_time();
 

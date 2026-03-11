@@ -90,7 +90,6 @@ class HomeDashboardViewmodel:ViewModel() {
                     if (response.isSuccessful && response.body() != null) {
                         Log.d("NoticesAPI", "Response: ${response.body()}")
                         notices_liveData.postValue(response.body())
-                        notices_liveData.postValue(response.body())
                     } else {
                         Log.e("NoticesAPI", "Failed: ${response.errorBody()?.string()}")
                     }

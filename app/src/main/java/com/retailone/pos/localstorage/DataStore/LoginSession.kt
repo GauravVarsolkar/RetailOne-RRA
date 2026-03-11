@@ -30,6 +30,7 @@ class LoginSession (private val context: Context) {
         val startTotalizer = stringPreferencesKey("START_TOT")
         val startTOTMode = stringPreferencesKey("START_TOT_MODE")
         val cashupDateTime = stringPreferencesKey("CASHUP_DATE_TIME")
+        val isFreshLogin = booleanPreferencesKey("IS_FRESH_LOGIN")
     }
 
 
@@ -39,6 +40,19 @@ class LoginSession (private val context: Context) {
             it[IsLogin] = loginStatus
         }
     }
+
+
+    suspend fun setFreshLogin(value: Boolean) {
+        context.dataStore.edit {
+            it[isFreshLogin] = value
+        }
+    }
+
+
+    fun getFreshLogin() = context.dataStore.data.map {
+        it[isFreshLogin] ?: false
+    }
+
 
 
 
