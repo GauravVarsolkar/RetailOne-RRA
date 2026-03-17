@@ -20,6 +20,7 @@ import com.retailone.pos.viewmodels.MPOSLoginViewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import com.retailone.pos.utils.FeatureManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -76,6 +77,11 @@ class MPOSLoginActivity : AppCompatActivity() {
                     loginSession.storeLoginSession(it.data.token,false)
                     loginSession.storeCashupDateTime(it.cashup_date_time.toString())
                     Log.d("LoginSession", "Saving cashup time: ${it.cashup_date_time}")
+                    val spotDiscount = it.data.spot_discount
+                    val isEnabled = spotDiscount?.is_spot_discount_enabled == 1
+                    val maxLimit = spotDiscount?.max_spot_discount_limit ?: "0.00"
+                    loginSession.storeSpotDiscount(isEnabled, maxLimit)
+                    Log.d("LoginSession", "Spot Discount Enabled: $isEnabled | Max Limit: $maxLimit")
                     profileAttendanceViewmodel.callUserProfileApi(this@MPOSLoginActivity)
                     //get store Id And Save it
                 }
@@ -94,33 +100,34 @@ class MPOSLoginActivity : AppCompatActivity() {
                 showMessage(it.message)
         }
 
-        profileAttendanceViewmodel.userProfileLiveData.observe(this){
+        profileAttendanceViewmodel.userProfileLiveData.observe(this) {
 
-          // if store id and login response is not null save the login session
             CoroutineScope(Dispatchers.IO).launch {
                 val storeid = it.data.user_details.store_id
                 val store_manager_id = it.data.user_details.id
 
+                // ✅ Extract modules safely
+                val modules = it.data.user_details.organization?.modules ?: emptyList()
 
-                if(!storeid.isNullOrBlank() && loginResponse!= null){
+                if (!storeid.isNullOrBlank() && loginResponse != null) {
 
-                   // Timeout helper
                     val timeouthelper = TimeoutHelper(this@MPOSLoginActivity)
                     timeouthelper.saveSessionTimestamp()
 
                     loginSession.saveStoreID(storeid)
-                    loginSession.saveStoreManagerID(store_manager_id.toString()) //storemanager_id
-                    loginSession.storeLoginSession(loginResponse!!.data.token,true)
+                    loginSession.saveStoreManagerID(store_manager_id.toString())
+                    loginSession.saveModules(modules)       // ✅ NEW
+                    FeatureManager.init(modules)            // ✅ NEW
+                    loginSession.storeLoginSession(loginResponse!!.data.token, true)
                     loginSession.setFreshLogin(true)
-                    showMessage("Login Sucessfull")
-                   // navigateToActivity(FetchTOT::class.java,"USER_STATUS" ,"LoggedIn")
+                    showMessage("Login Successful")
                     navigateToHomepage()
-                }else{
+                } else {
                     showMessage("User not associated with any store")
                 }
             }
-
         }
+
 
 
         binding.loginBtn.setOnClickListener {

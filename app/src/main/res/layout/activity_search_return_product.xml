@@ -503,6 +503,35 @@
                     </LinearLayout>
 
                     <LinearLayout
+                        android:id="@+id/spotDiscountRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingVertical="4dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/spotDiscountPercentField"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/poppins_regular"
+                            android:text="(-) Spot Discount"
+                            android:textColor="@color/black"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/spotDiscountAmountValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/poppins_regular"
+                            android:text="-"
+                            android:textColor="@color/goodgrey"
+                            android:textSize="14sp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
                         android:id="@+id/taxLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

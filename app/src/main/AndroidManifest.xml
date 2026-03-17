@@ -22,6 +22,7 @@
     <uses-feature android:name="android.hardware.camera.autofocus" />
 
     <application
+        android:name=".MyApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
@@ -153,13 +154,12 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
             android:name=".MainActivity"
-            android:exported="false" /> <!-- android:authorities="com.retailone.pos.fileprovider" -->
+            android:exported="false" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.retailone.pos.FileProvider"

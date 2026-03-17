@@ -80,6 +80,8 @@ class PointofSaleDetailsActivity : AppCompatActivity() {
     var ctpinx = ""
     var cidx = 0
     var total_amountx = 0.0
+    var spotDiscountPercent = 0.0
+
 
     val SALE_LIMIT = 100000.0
 
@@ -109,6 +111,7 @@ class PointofSaleDetailsActivity : AppCompatActivity() {
         cidx = intent.getIntExtra("c_id", 0)
         ctpinx = intent.getStringExtra("c_tpin").toString()
         total_amountx = intent.getDoubleExtra("total_amount", 0.0)
+        spotDiscountPercent = intent.getDoubleExtra("spot_discount_percent", 0.0)
 
         if (cidx != 0) {
             binding.apply {
@@ -171,6 +174,16 @@ class PointofSaleDetailsActivity : AppCompatActivity() {
             subtotal.text = NumberFormatter().formatPrice(
                 posAddToCartRes.sub_total.toString(), localizationData
             )
+            val spotAmount = posAddToCartRes.spot_discount_amount.toDoubleOrNull() ?: 0.0
+            if (spotAmount > 0.0) {
+                spotDiscountRow.isVisible = true
+                spotDiscountPercentField.text = "(-) Spot discount ${posAddToCartRes.spot_discount_percentage}%"
+                spotDiscountAmountValue.text = NumberFormatter().formatPrice(
+                    posAddToCartRes.spot_discount_amount, localizationData
+                )
+            } else {
+                spotDiscountRow.isVisible = false
+            }
             // 🔹 DYNAMIC TAX RATE DISPLAY
 // Collect unique tax rates from all products and clean them
             val uniqueTaxRates = posAddToCartRes.data
@@ -522,7 +535,9 @@ class PointofSaleDetailsActivity : AppCompatActivity() {
                 tax_details = null,
                 tax_summery = null,
                 discount_rate = 0,
-                total_after_discount = 0
+                total_after_discount = 0,
+                spot_discount_percentage = spotDiscountPercent,
+                spot_discount_amount = data.spot_discount_amount
             )
 
             Log.d("nm", Gson().toJson(pos_saledata))

@@ -132,6 +132,20 @@ class SalesPaymentDetailsActivity : AppCompatActivity() {
                 binding.apply {
                     orderId.text = "ID: "+salesdata?.invoice_id?.toString()
                     date.text = "Date: "+DateTimeFormatting.formatGlobalTime(salesdata.created_at,localizationData.timezone)
+                    val spotPercent = salesdata.spot_discount_percentage?.toDoubleOrNull() ?: 0.0
+                    val spotAmount = salesdata.spot_discount_amount?.toDoubleOrNull() ?: 0.0
+                    if (spotPercent > 0.0 || spotAmount > 0.0) {
+                        val discountPercent = if (spotPercent % 1.0 == 0.0) spotPercent.toInt().toString() else spotPercent.toString()
+                        spotDiscountPercentText.isVisible = true
+                        spotDiscountAmountText.isVisible = true
+                        spotDiscountPercentText.text = "Spot Discount: $discountPercent%"
+                        spotDiscountAmountText.text = "Spot Discount Amount: " + NumberFormatter().formatPrice(salesdata.spot_discount_amount.toString(), localizationData)
+                    } else {
+                        spotDiscountPercentText.isVisible = false
+                        spotDiscountAmountText.isVisible = false
+                    }
+
+
                     grandtotal.text = "Grand total: $formattedPrice"
                     paymenttype.text = "Payment type: "+salesdata.payment_type.toString()
                     storename.text = "Store name: "+(salesdata.store_details.store_name?:"")

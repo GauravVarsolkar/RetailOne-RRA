@@ -9,6 +9,10 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.text.Editable
+import android.text.InputFilter
+import android.text.Spanned
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -83,6 +87,8 @@ class PointOfSaleActivity : AppCompatActivity(), OnDeleteItemClickListener,
     private val PERMISSION_REQUEST_CAMERA = 1
     private lateinit var scanQrResultLauncher: ActivityResultLauncher<Intent>
     var canpressback = true
+    private var maxSpotDiscountLimit = 0.0
+    private var appliedSpotDiscountPercent = 0.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -109,10 +115,17 @@ class PointOfSaleActivity : AppCompatActivity(), OnDeleteItemClickListener,
         val loginSession = LoginSession.getInstance(this)
         lifecycleScope.launch {
             storeid = loginSession.getStoreID().first().toInt()
-            pos_viewmodel.callSearchStoreProductApi(
-                "", storeid, c_id, this@PointOfSaleActivity
-            )
+            pos_viewmodel.callSearchStoreProductApi("", storeid, c_id, this@PointOfSaleActivity)
+
+            val isSpotDiscountEnabled = loginSession.isSpotDiscountEnabled().first()
+            val limitStr = loginSession.getSpotDiscountLimit().first()
+            maxSpotDiscountLimit = limitStr.toDoubleOrNull() ?: 0.0
+
+            if (isSpotDiscountEnabled) {
+                binding.spotDiscountCard.isVisible = true
+            }
         }
+        setupSpotDiscountUI()
 
         // loading spinner for main screen (center progress card)
         pos_viewmodel.loadingLiveData.observe(this) {
@@ -392,6 +405,7 @@ class PointOfSaleActivity : AppCompatActivity(), OnDeleteItemClickListener,
                                 intent.putExtra("c_mobile", c_mobile)
                                 intent.putExtra("c_tpin", c_tpin)
                                 intent.putExtra("c_id", c_id)
+                                intent.putExtra("spot_discount_percent", appliedSpotDiscountPercent)
                                 intent.putExtra("total_amount", total_amount)
                                 startActivity(intent)
                             } else {
@@ -471,6 +485,9 @@ class PointOfSaleActivity : AppCompatActivity(), OnDeleteItemClickListener,
                 subtotal.text = NumberFormatter().formatPrice(
                     addtocartres.sub_total.toString(), localizationData
                 )
+                spotDiscountPercentField.text = "(-) Spot Discount ${addtocartres.spot_discount_percentage}%"
+                spotDiscountAmountValue.text = NumberFormatter().formatPrice(addtocartres.spot_discount_amount.toString(), localizationData)
+                spotDiscountRow.isVisible = addtocartres.spot_discount_amount.toDoubleOrNull()?.let { it > 0.0 } ?: false
                 // 🔹 DYNAMIC TAX RATE DISPLAY
                 // Collect unique tax rates from all products
                 val uniqueTaxRates = addtocartres.data
@@ -664,6 +681,58 @@ override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) 
             }
         }
     }
+    private fun setupSpotDiscountUI() {
+
+        binding.checkboxYes.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                binding.checkboxNo.isChecked = false
+                binding.spotDiscountInputLayout.isVisible = true
+                binding.spotDiscountInput.requestFocus()
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(binding.spotDiscountInput, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+        binding.spotDiscountInput.filters = arrayOf(object : InputFilter {
+            override fun filter(
+                source: CharSequence?, start: Int, end: Int,
+                dest: Spanned?, dstart: Int, dend: Int
+            ): CharSequence? {
+                val result = dest.toString().substring(0, dstart) +
+                        source +
+                        dest.toString().substring(dend)
+                val pattern = Regex("^\\d{0,3}(\\.\\d{0,2})?$")
+                return if (pattern.matches(result)) null else ""
+            }
+        })
+
+        binding.checkboxNo.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                binding.checkboxYes.isChecked = false
+                binding.spotDiscountInputLayout.isVisible = false
+                binding.spotDiscountInput.setText("")
+                appliedSpotDiscountPercent = 0.0
+                binding.spotDiscountCard.isVisible = false
+            }
+        }
+
+        binding.spotDiscountInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val input = s.toString().toDoubleOrNull() ?: return
+                if (input > maxSpotDiscountLimit) {
+                    binding.spotDiscountInput.setText("")
+                    appliedSpotDiscountPercent = 0.0
+                    showMessage("Spot discount cannot exceed {$maxSpotDiscountLimit.toString()) %")  // ← updated
+                } else {
+                    appliedSpotDiscountPercent = input
+                    Log.d("SpotDiscount", "Applied discount: $appliedSpotDiscountPercent%")
+                    calladdToCartAPI()
+                }
+            }
+        })
+    }
+
 
 
 // quantity updated from cart item dialog / batch sheet
@@ -756,7 +825,11 @@ private fun calladdToCartAPI() {
         )
     }
 
-    val cart_data = PosAddToCartReq(cartitemlist)
+    val cart_data = PosAddToCartReq(
+        store_id = storeid,
+        spot_discount_percentage = appliedSpotDiscountPercent,
+        products = cartitemlist
+    )
     pos_viewmodel.callAddtoCartPosApi(cart_data, this@PointOfSaleActivity)
 
     val gson = Gson()

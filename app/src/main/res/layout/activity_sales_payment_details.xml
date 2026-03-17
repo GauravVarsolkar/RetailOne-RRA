@@ -194,6 +194,31 @@
                         android:textSize="14dp" />
 
                     <TextView
+                        android:id="@+id/spot_discount_percent_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/avenirnextltpro_medium"
+                        android:text="Spot Discount"
+                        android:textColor="@color/colorgreytwo"
+                        android:textSize="14dp"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/spot_discount_amount_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/avenirnextltpro_medium"
+                        android:text="Spot Discount Amount"
+                        android:textColor="@color/colorgreytwo"
+                        android:textSize="14dp"
+                        android:visibility="gone" />
+
+
+                    <TextView
                         android:id="@+id/paymenttype"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"

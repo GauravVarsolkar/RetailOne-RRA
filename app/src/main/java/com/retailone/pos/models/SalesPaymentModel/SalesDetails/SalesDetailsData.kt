@@ -23,6 +23,8 @@ data class SalesDetailsData(
     val tax_amount: Double,
     val updated_at: String,
     val total_refunded_amount: Double,
+    val spot_discount_percentage: String?,
+    val spot_discount_amount: String?,
     val summary: Summary? = null
 )
 data class Summary(

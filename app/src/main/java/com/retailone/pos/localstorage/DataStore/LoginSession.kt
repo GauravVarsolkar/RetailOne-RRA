@@ -30,7 +30,10 @@ class LoginSession (private val context: Context) {
         val startTotalizer = stringPreferencesKey("START_TOT")
         val startTOTMode = stringPreferencesKey("START_TOT_MODE")
         val cashupDateTime = stringPreferencesKey("CASHUP_DATE_TIME")
+        val modulesKey = stringPreferencesKey("ORG_MODULES")
         val isFreshLogin = booleanPreferencesKey("IS_FRESH_LOGIN")
+        val spotDiscountEnabled = booleanPreferencesKey("SPOT_DISCOUNT_ENABLED")
+        val spotDiscountLimit = stringPreferencesKey("SPOT_DISCOUNT_LIMIT")
     }
 
 
@@ -41,18 +44,20 @@ class LoginSession (private val context: Context) {
         }
     }
 
-
-    suspend fun setFreshLogin(value: Boolean) {
+    suspend fun storeSpotDiscount(isEnabled: Boolean, maxLimit: String) {
         context.dataStore.edit {
-            it[isFreshLogin] = value
+            it[spotDiscountEnabled] = isEnabled
+            it[spotDiscountLimit] = maxLimit
         }
     }
 
-
-    fun getFreshLogin() = context.dataStore.data.map {
-        it[isFreshLogin] ?: false
+    fun isSpotDiscountEnabled() = context.dataStore.data.map {
+        it[spotDiscountEnabled] ?: false
     }
 
+    fun getSpotDiscountLimit() = context.dataStore.data.map {
+        it[spotDiscountLimit] ?: "0.00"
+    }
 
 
 
@@ -78,7 +83,16 @@ class LoginSession (private val context: Context) {
         it[cashupDateTime] ?: ""
     }
 
+    suspend fun setFreshLogin(value: Boolean) {
+        context.dataStore.edit {
+            it[isFreshLogin] = value
+        }
+    }
 
+
+    fun getFreshLogin() = context.dataStore.data.map {
+        it[isFreshLogin] ?: false
+    }
 
      fun getToken() = context.dataStore.data.map {
         //it[TOKEN] ?: null
@@ -93,8 +107,10 @@ class LoginSession (private val context: Context) {
         context.dataStore.edit {
             it.remove(TOKEN)
             it.remove(IsLogin)
+            it.remove(modulesKey)  // ✅ ADD THIS
         }
     }
+
 
     suspend fun saveStoreID(storeid:String){
         context.dataStore.edit {
@@ -105,6 +121,17 @@ class LoginSession (private val context: Context) {
         it[storeID] ?: ""
     }
 
+    suspend fun saveModules(modules: List<String>) {
+        context.dataStore.edit {
+            it[modulesKey] = modules.joinToString(",")
+        }
+    }
+
+    fun getModules() = context.dataStore.data.map {
+        val raw = it[modulesKey] ?: ""
+        if (raw.isEmpty()) emptyList()
+        else raw.split(",").map { m -> m.trim() }
+    }
 
 
     suspend fun saveStoreManagerID(store_manager_id:String){

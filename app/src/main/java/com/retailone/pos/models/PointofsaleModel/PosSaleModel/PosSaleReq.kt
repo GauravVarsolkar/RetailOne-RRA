@@ -28,6 +28,8 @@ data class PosSaleReq(
     val tax_details: TaxDetails?,
     val total_after_discount: Int,
     val tax_summery: List<TaxSummary>?,
-    val discount_rate : Int
+    val discount_rate : Int,
+    val spot_discount_percentage: Double,
+    val spot_discount_amount: String,
 )
 
