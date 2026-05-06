@@ -52,7 +52,7 @@ object Constants {
 
     const val BASE_URL = "https://retail-preprod.mountmerugroup.com/api/"
     const val IMAGE_URL = "https://retail-preprod.mountmerugroup.com/"
-
+//ok
     // Local development server
 //    const val BASE_URL = "http://192.168.1.32:8000/api/"
 //    const val IMAGE_URL = "http://192.168.1.32:8000/"
