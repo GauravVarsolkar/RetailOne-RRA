@@ -180,13 +180,17 @@ class SearchReturnProductActivity : AppCompatActivity(), OnReturnQuantityChangeL
                     binding.receiptTypeLayout.isVisible = false
 
                     binding.summaryCard.isVisible = true
-                    val spotPct = data.spot_discount_percentage?.toDouble() ?: 0.0
-                    val spotAmt = data.sub_total.toDouble() * spotPct / 100
+                    val normalDiscountAmt = data.discount_amount.toSafeDouble()
+                    val spotDiscountAmt = data.spot_discount_amount.toSafeDouble()
+                    val spotDiscountPct = data.spot_discount_percentage.toSafeDouble()
+
                     updateSummaryCard(
-                        subtotal = data.sub_total.toDouble(),
-                        tax = data.tax_amount.toDouble(),
-                        total = data.grand_total.toDouble(),
-                        discount = spotAmt
+                        subtotal = data.sub_total.toSafeDouble(),
+                        tax = data.tax_amount.toSafeDouble(),
+                        total = data.grand_total.toSafeDouble(),
+                        discount = normalDiscountAmt,
+                        spotDiscountAmount = spotDiscountAmt,
+                        spotDiscountPercent = spotDiscountPct
                     )
 
                     binding.paymentcard.isVisible = false
@@ -224,13 +228,15 @@ class SearchReturnProductActivity : AppCompatActivity(), OnReturnQuantityChangeL
                     binding.relativeLayout2.isVisible = true
                     binding.paymentcard.isVisible = false
 
-                    val subtotalValue = data.sub_total.toDouble()
-                    val taxValue = data.tax_amount.toDouble()
-                    val grandValue = data.grand_total.toDouble()
+                    val subtotalValue = data.sub_total.toSafeDouble()
+                    val taxValue = data.tax_amount.toSafeDouble()
+                    val grandValue = data.grand_total.toSafeDouble()
 
                     val roundedSubtotal = BigDecimal.valueOf(subtotalValue)
                         .setScale(0, RoundingMode.HALF_UP)
                     val roundedTax = BigDecimal.valueOf(taxValue)
+                        .setScale(0, RoundingMode.HALF_UP)
+                    val roundedGrand = BigDecimal.valueOf(grandValue)
                         .setScale(0, RoundingMode.HALF_UP)
 
                     binding.subtotal.setText(roundedSubtotal.toPlainString())
@@ -240,7 +246,16 @@ class SearchReturnProductActivity : AppCompatActivity(), OnReturnQuantityChangeL
 
                     binding.taxAmount.setText(roundedTax.toPlainString())
                     binding.alltotalAmount.setText(
-                        NumberFormatter().formatPrice(grandValue.toString(), localizationData)
+                        NumberFormatter().formatPrice(
+                            roundedGrand.toPlainString(),
+                            localizationData
+                        )
+                    )
+
+                    updateSeparateDiscountUI(
+                        normalDiscountAmount = data.discount_amount.toSafeDouble(),
+                        spotDiscountPercent = data.spot_discount_percentage.toSafeDouble(),
+                        spotDiscountAmount = data.spot_discount_amount.toSafeDouble()
                     )
                 }
 
@@ -349,34 +364,62 @@ class SearchReturnProductActivity : AppCompatActivity(), OnReturnQuantityChangeL
         setupCopyReceiptButton()
     }
 
-    private fun updateSummaryCard(subtotal: Double, tax: Double, total: Double, discount: Double = 0.0) {
-        val roundedSubtotal = BigDecimal.valueOf(subtotal).setScale(0, RoundingMode.HALF_UP)
-        val roundedTax = BigDecimal.valueOf(tax).setScale(0, RoundingMode.HALF_UP)
-        val roundedTotal = BigDecimal.valueOf(total).setScale(0, RoundingMode.HALF_UP)
+    private fun updateSummaryCard(
+        subtotal: Double,
+        tax: Double,
+        total: Double,
+        discount: Double = 0.0,
+        spotDiscountAmount: Double = 0.0,
+        spotDiscountPercent: Double = 0.0
+    ) {
+        // Round to whole numbers as per your existing logic
+        val roundedSubtotal = BigDecimal.valueOf(subtotal).setScale(0, RoundingMode.HALF_UP).toDouble()
+        val roundedTotal = BigDecimal.valueOf(total).setScale(0, RoundingMode.HALF_UP).toDouble()
+
+        // 📌 FIX: Calculate exact tax to display so that the math perfectly adds up on screen.
+        // Mathematical rule: Subtotal - Discounts + Tax = Total
+        // Therefore: Tax = Total - Subtotal + Discounts
+        val calculatedTax = roundedTotal - roundedSubtotal + discount + spotDiscountAmount
 
         binding.tvSubtotalValue.text = NumberFormatter().formatPrice(
-            roundedSubtotal.toPlainString(),
+            String.format(Locale.US, "%.2f", roundedSubtotal),
             localizationData
         )
 
         binding.tvTaxValue.text = NumberFormatter().formatPrice(
-            roundedTax.toPlainString(),
+            String.format(Locale.US, "%.2f", calculatedTax),
             localizationData
         )
 
         binding.tvTotalValue.text = NumberFormatter().formatPrice(
-            roundedTotal.toPlainString(),
+            String.format(Locale.US, "%.2f", roundedTotal),
             localizationData
         )
 
+        // Normal discount row
         if (discount > 0.0) {
             binding.discountSummaryRow.isVisible = true
             binding.tvDiscountValue.text = NumberFormatter().formatPrice(
-                String.format(Locale.US, "%.2f", discount),
-                localizationData
+                String.format(Locale.US, "%.2f", discount), localizationData
             )
         } else {
             binding.discountSummaryRow.isVisible = false
+        }
+
+        // Spot discount row
+        if (spotDiscountAmount > 0.0) {
+            binding.spotDiscountSummaryRow.isVisible = true
+            if (spotDiscountPercent > 0.0) {
+                binding.tvSpotDiscountLabel.text =
+                    "(-) Spot Discount ${"%.2f".format(Locale.US, spotDiscountPercent)}%"
+            } else {
+                binding.tvSpotDiscountLabel.text = "(-) Spot Discount"
+            }
+            binding.tvSpotDiscountValue.text = NumberFormatter().formatPrice(
+                String.format(Locale.US, "%.2f", spotDiscountAmount), localizationData
+            )
+        } else {
+            binding.spotDiscountSummaryRow.isVisible = false
         }
     }
     private fun setupCopyReceiptButton() {
@@ -588,111 +631,180 @@ class SearchReturnProductActivity : AppCompatActivity(), OnReturnQuantityChangeL
     }
 
     private fun recalculateTotalsFromBatches() {
-        Log.e("TAX_FIX_DEBUG", "🔥🔥🔥 recalculateTotalsFromBatches() CALLED 🔥🔥🔥")
+        Log.e("RETURN_CALC_DEBUG", "========== recalculateTotalsFromBatches() CALLED ==========")
 
         if (!this::returnItemData.isInitialized) {
-            Log.e("TAX_FIX_DEBUG", "❌ returnItemData NOT initialized yet - exiting")
+            Log.e("RETURN_CALC_DEBUG", "returnItemData not initialized")
             return
         }
 
         binding.relativeLayout.isVisible = true
         binding.relativeLayout2.isVisible = true
 
-        Log.d("TAX_FIX_DEBUG", "========== recalculateTotalsFromBatches() START ==========")
-        Log.d("TAX_FIX_DEBUG", "currentBatchList.size: ${currentBatchList.size}")
+        val taxPercentage = returnItemData.tax.toSafeDouble()
+        val spotDiscountPercent = returnItemData.spot_discount_percentage.toSafeDouble()
+        val originalNormalDiscount = returnItemData.discount_amount.toSafeDouble()
+        val originalSubtotal = returnItemData.sub_total.toSafeDouble()
 
-        if (currentBatchList.isEmpty() || currentBatchList.all { it.batch_return_quantity == 0 }) {
-            Log.d("TAX_FIX_DEBUG", "No batches selected - showing original invoice totals")
+        // No batch selected -> show original invoice values from API
+        if (currentBatchList.isEmpty() || currentBatchList.all { (it.batch_return_quantity ?: 0) == 0 }) {
+            val subtotalValue = returnItemData.sub_total.toSafeDouble()
+            val taxValue = returnItemData.tax_amount.toSafeDouble()
+            val grandValue = returnItemData.grand_total.toSafeDouble()
 
-            val subtotalValue = returnItemData.sub_total.toDouble()
-            val taxValue = returnItemData.tax_amount.toDouble()
-            val grandValue = returnItemData.grand_total.toDouble()
+            val apiSpotDiscountAmount = returnItemData.spot_discount_amount.toSafeDouble()
 
             val roundedSubtotal = BigDecimal.valueOf(subtotalValue).setScale(0, RoundingMode.HALF_UP)
             val roundedTax = BigDecimal.valueOf(taxValue).setScale(0, RoundingMode.HALF_UP)
             val roundedGrandTotal = BigDecimal.valueOf(grandValue).setScale(0, RoundingMode.HALF_UP)
 
+            // Update Old bottom views (if visible)
             binding.subtotal.setText(roundedSubtotal.toPlainString())
             binding.taxAmount.setText(roundedTax.toPlainString())
-            binding.alltotalAmount.setText(roundedGrandTotal.toPlainString())
+            binding.alltotalAmount.setText(
+                NumberFormatter().formatPrice(
+                    roundedGrandTotal.toPlainString(),
+                    localizationData
+                )
+            )
 
-            binding.tvSubtotalValue.text = NumberFormatter().formatPrice(roundedSubtotal.toPlainString(), localizationData)
-            binding.tvTaxValue.text = NumberFormatter().formatPrice(roundedTax.toPlainString(), localizationData)
-            binding.tvTotalValue.text = NumberFormatter().formatPrice(roundedGrandTotal.toPlainString(), localizationData)
-            binding.spotDiscountRow.isVisible = false
+            // 📌 Call the unified update function here
+            updateSummaryCard(
+                subtotal = subtotalValue,
+                tax = taxValue,
+                total = grandValue,
+                discount = originalNormalDiscount,
+                spotDiscountAmount = apiSpotDiscountAmount,
+                spotDiscountPercent = spotDiscountPercent
+            )
 
-            Log.d("TAX_FIX_DEBUG", "========== recalculateTotalsFromBatches() END ==========")
+            updateSeparateDiscountUI(
+                normalDiscountAmount = originalNormalDiscount,
+                spotDiscountPercent = spotDiscountPercent,
+                spotDiscountAmount = apiSpotDiscountAmount
+            )
+
+            Log.d("RETURN_CALC_DEBUG", "No batch selected - original API values shown")
             return
         }
 
+        // Step 1: Calculate subtotal from selected return batches (tax exclusive)
         var subtotal = 0.0
-        val taxPercentage = returnItemData.tax.toDoubleOrNull() ?: 0.0
-        Log.d("TAX_FIX_DEBUG", "Tax percentage: $taxPercentage%")
 
         currentBatchList.forEachIndexed { index, batch ->
-            val qty = batch.batch_return_quantity
+            val qty = batch.batch_return_quantity ?: 0
+            val retailPrice = batch.retail_price ?: 0.0
 
             if (qty > 0) {
-                Log.d("TAX_FIX_DEBUG", "--- Batch $index ---")
-                Log.d("TAX_FIX_DEBUG", "  batch: ${batch.batch}")
-                Log.d("TAX_FIX_DEBUG", "  sales_item_id: ${batch.sales_item_id}")
-                Log.d("TAX_FIX_DEBUG", "  batch_return_quantity: $qty")
-                Log.d("TAX_FIX_DEBUG", "  retail_price: ${batch.retail_price}")
+                val itemDetails = returnItemData.sales_items.orEmpty()
+                    .firstOrNull { it.id == batch.sales_item_id }
 
-                val retailPrice = batch.retail_price ?: 0.0
-                val divisor = 1 + (taxPercentage / 100.0)
-                val taxExclusivePrice = retailPrice / divisor
+                val taxExclusivePrice = itemDetails?.tax_exclusive_price
+                    ?: run {
+                        val divisor = 1 + (taxPercentage / 100.0)
+                        retailPrice / divisor
+                    }
+
                 val itemSubtotal = taxExclusivePrice * qty
                 subtotal += itemSubtotal
-
-                Log.d("TAX_FIX_DEBUG", "  divisor: $divisor")
-                Log.d("TAX_FIX_DEBUG", "  taxExclusivePrice: $taxExclusivePrice")
-                Log.d("TAX_FIX_DEBUG", "  itemSubtotal: $itemSubtotal")
-                Log.d("TAX_FIX_DEBUG", "  ✅ INCLUDED")
             }
         }
 
-        Log.d("TAX_FIX_DEBUG", "FINAL subtotal: $subtotal")
+        // Step 2: Spot discount on subtotal
+        val spotDiscountAmount = subtotal * spotDiscountPercent / 100.0
 
-        // ✅ Spot discount applied first, then tax on discounted base
-        val spotDiscountPercent = returnItemData.spot_discount_percentage?.toDouble() ?: 0.0
-        val spotDiscountAmount = subtotal * spotDiscountPercent / 100
-        val discountedBase = subtotal - spotDiscountAmount
-        val taxAmount = discountedBase * (taxPercentage / 100.0)
-        val grandTotal = discountedBase + taxAmount
+        // Step 3: Proportional normal discount
+        val normalDiscountAmount =
+            if (originalSubtotal > 0) {
+                (subtotal / originalSubtotal) * originalNormalDiscount
+            } else {
+                0.0
+            }
 
-        Log.d("TAX_FIX_DEBUG", "FINAL taxAmount: $taxAmount")
+        // Step 4: Subtotal after all discounts
+        val subtotalAfterDiscount = subtotal - spotDiscountAmount - normalDiscountAmount
+
+        // Step 5: Tax on discounted subtotal
+        val taxAmount = subtotalAfterDiscount * taxPercentage / 100.0
+
+        // Step 6: Grand total
+        val grandTotal = subtotalAfterDiscount + taxAmount
 
         val roundedSubtotal = BigDecimal.valueOf(subtotal).setScale(0, RoundingMode.HALF_UP)
         val roundedTax = BigDecimal.valueOf(taxAmount).setScale(0, RoundingMode.HALF_UP)
         val roundedGrandTotal = BigDecimal.valueOf(grandTotal).setScale(0, RoundingMode.HALF_UP)
 
-        Log.d("TAX_FIX_DEBUG", "ROUNDED subtotal: $roundedSubtotal")
-        Log.d("TAX_FIX_DEBUG", "ROUNDED tax: $roundedTax")
-        Log.d("TAX_FIX_DEBUG", "GRAND TOTAL: $roundedGrandTotal")
-
+        // Update old bottom views (if visible)
         binding.subtotal.setText(roundedSubtotal.toPlainString())
         binding.taxAmount.setText(roundedTax.toPlainString())
-        binding.alltotalAmount.setText(roundedGrandTotal.toPlainString())
+        binding.alltotalAmount.setText(
+            NumberFormatter().formatPrice(
+                roundedGrandTotal.toPlainString(),
+                localizationData
+            )
+        )
 
-        binding.tvSubtotalValue.text = NumberFormatter().formatPrice(roundedSubtotal.toPlainString(), localizationData)
-        binding.tvTaxValue.text = NumberFormatter().formatPrice(roundedTax.toPlainString(), localizationData)
-        binding.tvTotalValue.text = NumberFormatter().formatPrice(roundedGrandTotal.toPlainString(), localizationData)
+        // 📌 Call the unified update function here too
+        updateSummaryCard(
+            subtotal = subtotal,
+            tax = taxAmount,
+            total = grandTotal,
+            discount = normalDiscountAmount,
+            spotDiscountAmount = spotDiscountAmount,
+            spotDiscountPercent = spotDiscountPercent
+        )
 
-        // ✅ Show/hide spot discount row
-        if (spotDiscountPercent > 0 && spotDiscountAmount > 0) {
-            binding.spotDiscountPercentField.text = "(-) Spot Discount ${"%.2f".format(spotDiscountPercent)}%"
-            binding.spotDiscountAmountValue.text = NumberFormatter().formatPrice(spotDiscountAmount.toString(), localizationData)
-            binding.spotDiscountRow.isVisible = true
-        } else {
-            binding.spotDiscountRow.isVisible = false
-        }
+        updateSeparateDiscountUI(
+            normalDiscountAmount = normalDiscountAmount,
+            spotDiscountPercent = spotDiscountPercent,
+            spotDiscountAmount = spotDiscountAmount
+        )
 
-        Log.d("TAX_FIX_DEBUG", "========== recalculateTotalsFromBatches() END ==========")
+        Log.d("RETURN_CALC_DEBUG", "========== recalculateTotalsFromBatches() END ==========")
     }
-
     private fun recalculateTotals() {
         recalculateTotalsFromBatches()
+    }
+    private fun Any?.toSafeDouble(): Double {
+        return when (this) {
+            null -> 0.0
+            is Number -> this.toDouble()
+            is String -> this.trim().toDoubleOrNull() ?: 0.0
+            else -> this.toString().trim().toDoubleOrNull() ?: 0.0
+        }
+    }
+
+    private fun updateSeparateDiscountUI(
+        normalDiscountAmount: Double,
+        spotDiscountPercent: Double,
+        spotDiscountAmount: Double
+    ) {
+        // Normal discount row
+        if (normalDiscountAmount > 0) {
+            binding.delChargeLayout.isVisible = true
+            binding.discountvalue.text = NumberFormatter().formatPrice(
+                String.format(Locale.US, "%.2f", normalDiscountAmount),
+                localizationData
+            )
+        } else {
+            binding.delChargeLayout.isVisible = false
+            binding.discountvalue.text = NumberFormatter().formatPrice("0.00", localizationData)
+        }
+
+        // Spot discount row
+        if (spotDiscountAmount > 0) {
+            binding.spotDiscountRow.isVisible = true
+            binding.spotDiscountPercentField.text =
+                "(-) Spot Discount ${"%.2f".format(Locale.US, spotDiscountPercent)}%"
+            binding.spotDiscountAmountValue.text = NumberFormatter().formatPrice(
+                String.format(Locale.US, "%.2f", spotDiscountAmount),
+                localizationData
+            )
+        } else {
+            binding.spotDiscountRow.isVisible = false
+            binding.spotDiscountAmountValue.text =
+                NumberFormatter().formatPrice("0.00", localizationData)
+        }
     }
 
     private fun showSucessDialog(msg: String, returnSaleRes: ReturnSaleRes) {
@@ -718,6 +830,7 @@ class SearchReturnProductActivity : AppCompatActivity(), OnReturnQuantityChangeL
             startActivity(intent)
             finish()
         }
+
 
         print_receipt.setOnClickListener {
             printerUtil?.printReturnReceiptData(returnSaleRes)

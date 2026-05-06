@@ -184,6 +184,7 @@
                 app:layout_constraintTop_toBottomOf="@id/positem_rcv" />
 
             <!-- 📌 NEW SUMMARY CARD (replaces paymentcard) -->
+            <!-- 📌 NEW SUMMARY CARD (replaces paymentcard) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/summaryCard"
                 android:layout_width="0dp"
@@ -257,7 +258,7 @@
                             android:textSize="15sp" />
                     </LinearLayout>
 
-                    <!-- Discount (Optional - hidden by default) -->
+                    <!-- Discount (Normal - hidden by default) -->
                     <LinearLayout
                         android:id="@+id/discountSummaryRow"
                         android:layout_width="match_parent"
@@ -278,6 +279,34 @@
 
                         <TextView
                             android:id="@+id/tvDiscountValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="RWF 0.00"
+                            android:textColor="@color/goodgrey"
+                            android:textSize="15sp" />
+                    </LinearLayout>
+
+                    <!-- Spot Discount (hidden by default) -->
+                    <LinearLayout
+                        android:id="@+id/spotDiscountSummaryRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:visibility="gone"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:id="@+id/tvSpotDiscountLabel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="(-) Spot Discount"
+                            android:textColor="@color/goodgrey"
+                            android:textSize="15sp" />
+
+                        <TextView
+                            android:id="@+id/tvSpotDiscountValue"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="RWF 0.00"
@@ -319,7 +348,6 @@
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/reason_layout"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"

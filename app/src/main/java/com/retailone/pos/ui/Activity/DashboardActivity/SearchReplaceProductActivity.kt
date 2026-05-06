@@ -601,10 +601,14 @@ class SearchReplaceProductActivity : AppCompatActivity(), OnReturnQuantityChange
         val discountAmount = returnItemData.discount_amount.toDouble()
         val grandTotal = returnItemData.grand_total.toDouble()
 
+        // 📌 NEW: Extract spot discount from the API response
+        val spotDiscountAmount = returnItemData.spot_discount_amount?.toString()?.toDoubleOrNull() ?: 0.0
+        val spotDiscountPercent = returnItemData.spot_discount_percentage?.toString()?.toDoubleOrNull() ?: 0.0
+
         Log.d(
             "API_FETCH_VALUES",
             "Response totals: sub_total=$subTotal, tax_amount=$taxAmount, " +
-                    "discount_amount=$discountAmount, grand_total=$grandTotal"
+                    "discount_amount=$discountAmount, spot_discount=$spotDiscountAmount, grand_total=$grandTotal"
         )
 
         if (subTotal == 0.0 && grandTotal == 0.0) {
@@ -641,11 +645,26 @@ class SearchReplaceProductActivity : AppCompatActivity(), OnReturnQuantityChange
             binding.discountvalue.text = NumberFormatter().formatPrice("0.00", localizationData)
         }
 
+        // 📌 NEW: Show/hide spot discount
+        if (spotDiscountAmount > 0.0) {
+            binding.spotDiscountSummaryRow.isVisible = true
+            binding.tvSpotDiscountLabel.text = if (spotDiscountPercent > 0.0) {
+                "(-) Spot Discount ${"%.2f".format(Locale.US, spotDiscountPercent)}%"
+            } else {
+                "(-) Spot Discount"
+            }
+            binding.tvSpotDiscountValue.text = NumberFormatter().formatPrice(
+                String.format(Locale.US, "%.2f", spotDiscountAmount), localizationData
+            )
+        } else {
+            binding.spotDiscountSummaryRow.isVisible = false
+            binding.tvSpotDiscountValue.text = NumberFormatter().formatPrice("0.00", localizationData)
+        }
+
         binding.tvTotalValue.text = NumberFormatter().formatPrice(
             String.format(Locale.US, "%.2f", grandTotal), localizationData
         )
     }
-
 
 
     /** Prefer tax-exclusive; else convert inclusive retail -> exclusive. */
@@ -717,11 +736,14 @@ class SearchReplaceProductActivity : AppCompatActivity(), OnReturnQuantityChange
         binding.discountSummaryRow.isVisible = false
         binding.tvDiscountValue.text = NumberFormatter().formatPrice("0.00", localizationData)
 
+        // 📌 NEW: reset summary card spot discount
+        binding.spotDiscountSummaryRow.isVisible = false
+        binding.tvSpotDiscountValue.text = NumberFormatter().formatPrice("0.00", localizationData)
+
         // reset bottom payment-card discount
         binding.delChargeLayout.isVisible = false
         binding.discountvalue.text = NumberFormatter().formatPrice("0.00", localizationData)
     }
-
 
 
 //    private fun setTotalsFromServer(d: ReturnItemData) {
@@ -743,6 +765,10 @@ class SearchReplaceProductActivity : AppCompatActivity(), OnReturnQuantityChange
         val subTotal = d.sub_total.toString()
         val taxDisplay = formatTaxForDisplay(d.tax)
 
+        // 📌 NEW: Extract spot discount from the API response
+        val spotDiscountAmount = d.spot_discount_amount?.toString()?.toDoubleOrNull() ?: 0.0
+        val spotDiscountPercent = d.spot_discount_percentage?.toString()?.toDoubleOrNull() ?: 0.0
+
         binding.subtotal.setText(subTotal)
         binding.taxfield.setText("(+) Tax @$taxDisplay")
         binding.taxAmount.setText(d.tax_amount.toString())
@@ -759,8 +785,23 @@ class SearchReplaceProductActivity : AppCompatActivity(), OnReturnQuantityChange
         binding.discountSummaryRow.visibility = View.GONE
         binding.tvDiscountValue.text =
             NumberFormatter().formatPrice("0.00", localizationData)
-    }
 
+        // 📌 NEW: Show/hide spot discount
+        if (spotDiscountAmount > 0.0) {
+            binding.spotDiscountSummaryRow.isVisible = true
+            binding.tvSpotDiscountLabel.text = if (spotDiscountPercent > 0.0) {
+                "(-) Spot Discount ${"%.2f".format(Locale.US, spotDiscountPercent)}%"
+            } else {
+                "(-) Spot Discount"
+            }
+            binding.tvSpotDiscountValue.text = NumberFormatter().formatPrice(
+                String.format(Locale.US, "%.2f", spotDiscountAmount), localizationData
+            )
+        } else {
+            binding.spotDiscountSummaryRow.isVisible = false
+            binding.tvSpotDiscountValue.text = NumberFormatter().formatPrice("0.00", localizationData)
+        }
+    }
 
     private fun updateReplaceUi() {
         val cart = LocalReturnCartHelper.getCartItems(this)

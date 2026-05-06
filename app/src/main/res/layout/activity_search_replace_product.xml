@@ -349,6 +349,34 @@
                             android:textSize="15sp" />
                     </LinearLayout>
 
+                    <!-- Spot Discount (hidden by default) -->
+                    <LinearLayout
+                        android:id="@+id/spotDiscountSummaryRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:visibility="gone"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:id="@+id/tvSpotDiscountLabel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="(-) Spot Discount"
+                            android:textColor="@color/goodgrey"
+                            android:textSize="15sp" />
+
+                        <TextView
+                            android:id="@+id/tvSpotDiscountValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="RWF 0.00"
+                            android:textColor="@color/goodgrey"
+                            android:textSize="15sp" />
+                    </LinearLayout>
+
 
                     <!-- Divider -->
                     <View
